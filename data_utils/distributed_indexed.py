@@ -130,7 +130,6 @@ class DistributedMMapIndexedDataset(torch.utils.data.Dataset):
         self._do_init(self._path, self._name, self._cache, self._state)
 
     def _probe_data_path(self, path, name, rank_total):
-        print_rank("Probing Dataset")
             
         state = 0
         history = {-1:(0, 0)}
@@ -141,8 +140,6 @@ class DistributedMMapIndexedDataset(torch.utils.data.Dataset):
                 history[state] = (history[state-1][1], history[state-1][1] + len(index))
             else:
                 break
-            
-        print_rank(f"Probing end. Max data state {state}, total length {history[state-1][1]}")
         
         return state, history
 

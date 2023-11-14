@@ -216,8 +216,6 @@ def get_teacher_lm_loss(args, tokenizer, model, teacher_model, model_batch):
 
 
 def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, optimizer: AdamW, lr_scheduler, dataset, device, teacher_model=None):
-    print_rank("Start Fine-tuning")
-
     # print_inspect(model, '*')
     if args.model_parallel:
         dp_world_size = mpu.get_data_parallel_world_size()
@@ -237,7 +235,6 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
     step, global_step = 1, 1
     total_loss, total_distil_loss, total_time = 0.0, 0.0, 0.0
     
-    evaluate(args, tokenizer, model, dataset["dev"], "dev", 0, device)
     for epoch in range(args.epochs):
         sampler.set_epoch(epoch)
 

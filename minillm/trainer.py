@@ -232,8 +232,6 @@ class PPOTrainer():
         self.global_iter_count = 1
         self.nth_evaluation = 0
 
-        self.evaluate()
-
         print_rank("Total Steps:", self.total_steps, "Epochs:", self.args.epochs)
         lm_epochs = 0        
         logging_stats = defaultdict(float)

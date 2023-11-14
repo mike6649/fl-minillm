@@ -30,12 +30,6 @@ def get_tokenizer(model_path, model_type):
 
 
 def my_finetune(args, model, tokenizer, dataset, ds_config=None):
-    """
-    arguments:
-    epoch, lr
-    """
-    print_rank("total_iters", args.total_iters)
-
     device = torch.cuda.current_device()
     model, optimizer, lr_scheduler = setup_optimizer(model, args, ds_config)
     model = finetune.finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset, device)
@@ -66,10 +60,10 @@ def main():
     dataset = finetune.prepare_dataset(args, tokenizer)
     
     # do not save model
-    args.save_interval = None
+    args.save_interval = float("inf")
     # do not generate answers during eval
     args.eval_gen = False
-    args.eval_interval = None
+    args.eval_interval = float("inf")
 
     model = get_model(args, torch.cuda.current_device())
     model = my_finetune(args, model, tokenizer, dataset)

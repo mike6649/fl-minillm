@@ -36,7 +36,6 @@ class PPOPipeline():
         self.num = min(num, len(self.ppo_ctx)) if num > 0 else len(self.ppo_ctx)
         self.fix_prompts = fix_prompts
         self.prompt_lengths = [None for _ in range(num)]
-        print_rank(f"Num PPO instances: {len(self.ppo_ctx)}")
             
     def __len__(self):
         return self.num

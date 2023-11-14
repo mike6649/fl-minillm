@@ -1,4 +1,6 @@
 import torch
+import deepspeed
+import logging
 import os
 import json
 import torch.distributed as dist
@@ -26,9 +28,11 @@ parallel_model_map = {
     "llama": ParallelLlamaForCausalLM
 }
 
-from utils import print_args, initialize, load_parallel, get_tokenizer
+from utils import print_args, initialize, load_parallel, get_tokenizer, print_rank
 
 from minillm import train, Reward
+
+deepspeed.utils.logger.setLevel(logging.WARNING)
 
 def get_model(model_path, model_type, model_parallel, device):
     config = AutoConfig.from_pretrained(model_path)
@@ -118,12 +122,12 @@ def setup_args():
         args.teacher_model_type = args.model_type
 
     # do not save model
-    args.save_interval = None
+    args.save_interval = float("inf")
     # do not generate answers during eval
     args.eval_gen = False
     # do not eval during fine-tuning
-    args.eval_interval = None
-
+    args.eval_interval = float("inf")
+    args.log_interval = float("inf")
     return ds_config, args
 
 def main():
@@ -137,6 +141,9 @@ def main():
     finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer)
 
     for round in range(args.fl_rounds):
+        print_rank("*" * 100)
+        print_rank(f"{round=}")
+        print_rank("*" * 100)
         # first fine-tune the clients
         client_fine_tune(client_models, args, tokenizer, fine_tune_dataset, ds_config)
 
