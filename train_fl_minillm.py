@@ -56,11 +56,15 @@ def get_client_models(args, device):
 
 def client_fine_tune(clients, args, tokenizer, finetune_dataset, ds_config):
     # fine tune sequentially because i dont care
-    for client_model in clients:
+    for i, client_model in enumerate(clients):
+        print_rank("*" * 100)
+        print_rank(f"Fine-tuning client {i}")
         my_finetune(args, client_model, tokenizer, finetune_dataset, ds_config)
 
 
 def client2server_kd(clients, server_model, args, tokenizer, ds_config):
+    print_rank("*" * 100)
+    print_rank(f"client2server_kd")
     # create megaclient
     megaclient = CombinedClients(clients)
 
@@ -82,7 +86,9 @@ def client2server_kd(clients, server_model, args, tokenizer, ds_config):
 def server2client_kd(client_models, server_model, args, tokenizer, ds_config):
     reward = Reward(args, tokenizer, server_model)
     
-    for client_model in client_models:
+    for i, client_model in enumerate(client_models):
+        print_rank("*" * 100)
+        print_rank(f"server2client_kd to client {i}")
         train_minillm(
             args=args,
             tokenizer=tokenizer,
@@ -142,7 +148,7 @@ def main():
 
     for round in range(args.fl_rounds):
         print_rank("*" * 100)
-        print_rank(f"{round=}")
+        print_rank(f"COMMUNICATION ROUND {round}")
         print_rank("*" * 100)
         # first fine-tune the clients
         client_fine_tune(client_models, args, tokenizer, fine_tune_dataset, ds_config)
