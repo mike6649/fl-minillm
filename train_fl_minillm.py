@@ -16,7 +16,7 @@ from transformers import (
 import finetune
 from fl.combined_clients import CombinedClients
 from fl.fl_arguments import get_args
-from fl.fl_fine_tuning import my_finetune, setup_fine_tuning_args
+from fl.fl_fine_tuning import my_finetune, setup_fine_tuning
 from fl.fl_minillm import train_minillm
 
 parallel_model_map = {
@@ -50,10 +50,10 @@ def get_server_model(args, device):
 def get_client_models(args, device):
     return [get_model(args.model_path, args.model_type, args.model_parallel, device) for _ in range(args.num_clients)]
 
-def client_fine_tune(clients, args, tokenizer, finetune_dataset):
+def client_fine_tune(clients, args, tokenizer, finetune_dataset, ds_config):
     # fine tune sequentially because i dont care
     for client_model in clients:
-        my_finetune(args, client_model, tokenizer, finetune_dataset)
+        my_finetune(args, client_model, tokenizer, finetune_dataset, ds_config)
 
 
 def client2server_kd(clients, server_model, args, tokenizer, ds_config):
@@ -134,12 +134,11 @@ def main():
     client_models = get_client_models(args, device)
     
     tokenizer = get_tokenizer(args)
-    fine_tune_dataset = finetune.prepare_dataset(args, tokenizer)  # TODO this should be 10 separate datasets or whathaveyou
-    setup_fine_tuning_args(args, fine_tune_dataset)
+    finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer)
 
-    for round in args.fl_rounds:
+    for round in range(args.fl_rounds):
         # first fine-tune the clients
-        client_fine_tune(client_models, args, tokenizer, fine_tune_dataset)
+        client_fine_tune(client_models, args, tokenizer, fine_tune_dataset, ds_config)
 
         # then KD to the server
         client2server_kd(client_models, server_model, args, tokenizer, ds_config)
