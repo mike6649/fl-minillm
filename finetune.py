@@ -310,11 +310,7 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
                     total_loss / (args.log_interval * args.gradient_accumulation_steps),
                     total_distil_loss / (args.log_interval * args.gradient_accumulation_steps),
                     total_time / (args.log_interval))
-                print_rank("*" * 100)
                 print_rank(log_str)
-                print_rank(args.save)
-                print_rank("*" * 100)
-                save_rank(log_str, os.path.join(args.save, "log.txt"))
                 total_loss, total_distil_loss, total_time = 0.0, 0.0, 0.0
             
             # Checkpointing

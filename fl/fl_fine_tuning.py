@@ -40,6 +40,7 @@ def setup_fine_tuning(all_args, tokenizer):
     args = copy.deepcopy(all_args)
     args.epochs = args.fine_tune_epochs
     args.do_train = True
+    args.mid_log_num = 0
     args.data_dir = args.prompt_data_dir
     dataset = finetune.prepare_dataset(args, tokenizer)   # TODO this should be 10 separate datasets or whathaveyou
     dp_world_size = mpu.get_data_parallel_world_size() if args.model_parallel else dist.get_world_size()

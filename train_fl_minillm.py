@@ -133,7 +133,7 @@ def setup_args():
     args.eval_gen = False
     # do not eval during fine-tuning
     args.eval_interval = float("inf")
-    args.log_interval = float("inf")
+    args.log_interval = 100
     return ds_config, args
 
 def main():
@@ -151,7 +151,7 @@ def main():
         print_rank(f"COMMUNICATION ROUND {round}")
         print_rank("*" * 100)
         # first fine-tune the clients
-        client_fine_tune(client_models, args, tokenizer, fine_tune_dataset, ds_config)
+        client_fine_tune(client_models, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
 
         # then KD to the server
         client2server_kd(client_models, server_model, args, tokenizer, ds_config)

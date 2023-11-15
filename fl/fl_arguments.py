@@ -3,7 +3,7 @@ from arguments import *
 
 def add_fl_args(parser):
     group = parser.add_argument_group('fl', 'federated learning config')
-    group.add_argument("--fine-tune-epochs", type=int, default=2)
+    group.add_argument("--fine-tune-epochs", type=int, default=1)
     group.add_argument("--num-clients", type=int, default=2)
     group.add_argument("--fl-rounds", type=int, default=2)
     return parser
