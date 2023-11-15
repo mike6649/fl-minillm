@@ -332,10 +332,11 @@ class PPOTrainer():
                             prefix += "| {}: {:.4f} ".format(key, log_stats.get(key, 0))
                         return prefix + suffix
 
-                    mid_log_step = self.args.gradient_accumulation_steps // self.args.mid_log_num
-                    mid_log_step = 1 if mid_log_step == 0 else mid_log_step
-                    if self.iter_count % mid_log_step == 0:
-                        print_rank(get_log(stats, 0))
+                    if self.args.mid_log_num > 0:
+                        mid_log_step = self.args.gradient_accumulation_steps // self.args.mid_log_num
+                        mid_log_step = 1 if mid_log_step == 0 else mid_log_step
+                        if self.iter_count % mid_log_step == 0:
+                            print_rank(get_log(stats, 0))
 
                     if self.global_iter_count % self.args.log_interval == 0 and self.iter_count % self.args.gradient_accumulation_steps == 0:
                         logging_stats = {k:v/(self.args.log_interval*self.args.gradient_accumulation_steps) for k,v in logging_stats.items()}

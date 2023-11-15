@@ -58,13 +58,13 @@ def client_fine_tune(clients, args, tokenizer, finetune_dataset, ds_config):
     # fine tune sequentially because i dont care
     for i, client_model in enumerate(clients):
         print_rank("*" * 100)
-        print_rank(f"Fine-tuning client {i}")
+        print_rank(f"Fine-tuning client {i}...")
         my_finetune(args, client_model, tokenizer, finetune_dataset, ds_config)
 
 
 def client2server_kd(clients, server_model, args, tokenizer, ds_config):
     print_rank("*" * 100)
-    print_rank(f"client2server_kd")
+    print_rank(f"Running client2server_kd...")
     # create megaclient
     megaclient = CombinedClients(clients)
 
@@ -88,7 +88,7 @@ def server2client_kd(client_models, server_model, args, tokenizer, ds_config):
     
     for i, client_model in enumerate(client_models):
         print_rank("*" * 100)
-        print_rank(f"server2client_kd to client {i}")
+        print_rank(f"server2client_kd to client {i}...")
         train_minillm(
             args=args,
             tokenizer=tokenizer,
@@ -133,7 +133,8 @@ def setup_args():
     args.eval_gen = False
     # do not eval during fine-tuning
     args.eval_interval = float("inf")
-    args.log_interval = 100
+    args.log_interval = 1000
+    args.mid_log_num = 0
     return ds_config, args
 
 def main():
@@ -151,7 +152,7 @@ def main():
         print_rank(f"COMMUNICATION ROUND {round}")
         print_rank("*" * 100)
         # first fine-tune the clients
-        client_fine_tune(client_models, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
+        # client_fine_tune(client_models, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
 
         # then KD to the server
         client2server_kd(client_models, server_model, args, tokenizer, ds_config)
