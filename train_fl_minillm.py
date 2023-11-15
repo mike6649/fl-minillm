@@ -58,7 +58,7 @@ def client_fine_tune(clients, args, tokenizer, finetune_dataset, ds_config):
     # fine tune sequentially because i dont care
     for i, client_model in enumerate(clients):
         print_rank("*" * 100)
-        print_rank(f"Fine-tuning client {i}...")
+        print_rank(f"Fine-tuning client {i + 1} / {len(clients)} ...")
         my_finetune(args, client_model, tokenizer, finetune_dataset, ds_config)
 
 
@@ -88,7 +88,7 @@ def server2client_kd(client_models, server_model, args, tokenizer, ds_config):
     
     for i, client_model in enumerate(client_models):
         print_rank("*" * 100)
-        print_rank(f"server2client_kd to client {i}...")
+        print_rank(f"server2client_kd to client {i + 1} / {len(client_models)}...")
         train_minillm(
             args=args,
             tokenizer=tokenizer,
@@ -149,10 +149,10 @@ def main():
 
     for round in range(args.fl_rounds):
         print_rank("*" * 100)
-        print_rank(f"COMMUNICATION ROUND {round}")
+        print_rank(f"COMMUNICATION ROUND {round + 1} / {args.fl_rounds}")
         print_rank("*" * 100)
         # first fine-tune the clients
-        # client_fine_tune(client_models, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
+        client_fine_tune(client_models, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
 
         # then KD to the server
         client2server_kd(client_models, server_model, args, tokenizer, ds_config)
