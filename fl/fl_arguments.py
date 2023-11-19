@@ -4,8 +4,9 @@ from arguments import *
 def add_fl_args(parser):
     group = parser.add_argument_group('fl', 'federated learning config')
     group.add_argument("--fine-tune-epochs", type=int, default=1)
-    group.add_argument("--num-clients", type=int, default=2)
+    group.add_argument("--num-clients", type=int, default=3)
     group.add_argument("--fl-rounds", type=int, default=2)
+    group.add_argument("--fl-rank", type=int, default=-1)
     return parser
 
 def get_args():
@@ -85,16 +86,16 @@ def get_args():
                      (f"_ln" if args.length_norm else "") + \
                      (f"_sr" if args.single_step_reg else "") + \
                      (f"_tm{args.teacher_mixed_alpha}" if args.teacher_mixed_alpha is not None else "")
-        save_path = os.path.join(
-            args.save,
-            (f"{args.ckpt_name}" + f"-{args.peft_name}" if args.peft_name is not None else "" + \
-             f"-{args.teacher_ckpt_name}" + f"-{args.teacher_peft_lora_name}" if hasattr(args, "teacher_peft_lora_name") else ""),
-            (f"bs{args.batch_size}-lr{args.lr}-G{args.gradient_accumulation_steps}-N{args.n_gpu}-NN{args.n_nodes}-lm{args.lm_coef}-len{args.max_length}" + \
-                (f"-mp{args.model_parallel_size}" if args.model_parallel > 0 else "")) + \
-            (f"-lora-{args.peft_lora_r}-{args.peft_lora_alpha}-{args.peft_lora_dropout}" if args.peft == "lora" else ""),
-            ppo_prefix + args.save_additional_suffix
-        )
-        args.save = save_path
+        # save_path = os.path.join(
+        #     args.save,
+        #     (f"{args.ckpt_name}" + f"-{args.peft_name}" if args.peft_name is not None else "" + \
+        #      f"-{args.teacher_ckpt_name}" + f"-{args.teacher_peft_lora_name}" if hasattr(args, "teacher_peft_lora_name") else ""),
+        #     (f"bs{args.batch_size}-lr{args.lr}-G{args.gradient_accumulation_steps}-N{args.n_gpu}-NN{args.n_nodes}-lm{args.lm_coef}-len{args.max_length}" + \
+        #         (f"-mp{args.model_parallel_size}" if args.model_parallel > 0 else "")) + \
+        #     (f"-lora-{args.peft_lora_r}-{args.peft_lora_alpha}-{args.peft_lora_dropout}" if args.peft == "lora" else ""),
+        #     ppo_prefix + args.save_additional_suffix
+        # )
+        # args.save = save_path
         
         if args.warmup_iters > 0:
             assert args.scheduler_name is not None

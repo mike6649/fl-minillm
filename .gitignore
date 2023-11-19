@@ -3,3 +3,6 @@ venv/
 .venv/
 processed_data/
 results/
+data/
+processed_data/
+checkpoints/

@@ -1,0 +1,15 @@
+CMD_LOAD_CONDA="module load anaconda3/2022.05"
+# CMD_LOAD_MPI="module load py-mpi4py"
+# CMD_THREADING="export MV2_USE_ALIGNED_ALLOC=1"
+# CMD_MORE_THREADING="export MV2_USE_THREAD_WARNING=0"
+# CMD_THREADING="export MV2_BCAST_HWLOC_TOPOLOGY=0"
+CMD_ACTIVATE_CONDA="conda activate sysml"
+
+CMD="srun bash fl/fl_train.sh"
+
+# ${CMD_LOAD_MPI}
+# ${CMD_THREADING}
+# ${CMD_MORE_THREADING}
+${CMD_LOAD_CONDA}
+${CMD_ACTIVATE_CONDA}
+${CMD}

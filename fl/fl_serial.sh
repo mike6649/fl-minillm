@@ -1,47 +1,16 @@
 #! /bin/bash
 
 MASTER_ADDR=localhost
-# MASTER_PORT=${3-2012}
+MASTER_PORT=${3-2012}
 NNODES=1
 NODE_RANK=0
 GPUS_PER_NODE=2
-
-PID_FILE="slurm_pids_$SLURM_JOB_ID.txt"
-
-> "$PID_FILE"
-sleep 1
-
-# Write the current task's PID to the file
-echo $SLURM_TASK_PID >> "$PID_FILE"
-
-# Wait to allow all tasks to write their PIDs
-sleep 10
-
-# Read all PIDs and find the minimum
-MIN_PID=$(sort -n "$PID_FILE" | head -n 1)
-
-NEW_MASTER_PORT=$(($SLURM_TASK_PID % 65536))
-NEW_RANK=$(($SLURM_TASK_PID % $MIN_PID))
-
-# Read all PIDs, sort them, and find the rank of the current task's PID
-# Save the sorted PIDs in an array
-readarray -t sorted_pids < <(sort -n "$PID_FILE")
-
-# Find the rank of the current task
-for i in "${!sorted_pids[@]}"; do
-    if [[ "${sorted_pids[$i]}" == "$SLURM_TASK_PID" ]]; then
-        NEW_RANK=$i
-        break
-    fi
-done
-
-# echo $NEW_RANK
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
                   --nnodes $NNODES \
                   --node_rank $NODE_RANK \
                   --master_addr $MASTER_ADDR \
-                  --master_port $NEW_MASTER_PORT"
+                  --master_port $MASTER_PORT"
 
 # model
 BASE_PATH=${1-"/storage/ice1/5/5/rarockiasamy3/fl-minillm"}
@@ -68,7 +37,7 @@ CHUNK_SIZE=16
 
 
 OPTS=""
-OPTS+=" --fl-rank ${NEW_RANK}"
+OPTS+=" --fl-rank 0"
 # model
 OPTS+=" --base-path ${BASE_PATH}"
 OPTS+=" --model-path ${CKPT}"

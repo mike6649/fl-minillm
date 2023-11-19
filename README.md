@@ -1,5 +1,14 @@
 # MiniLLM: Knowledge Distillation of Large Language Models
 
+ `salloc -N1 -t1:15:00 --gres=gpu:V100:2 --mem-per-gpu=0 -n 12`
+
+`salloc -N1 -t1:15:00 --mem-per-gpu=12G --ntasks-per-node=2 --gpus-per-task=2`
+
+`srun bash scripts/distilgpt2/minillm/train_large_xl.sh ~/scratch/fl-minillm 2012 2`
+`srun bash fl/fl_train.sh ~/scratch/fl-minillm`
+
+`bash fl/fl_train.sh ~/scratch/fl-minillm`
+
 ![Method](./figures/method.png)
 ## 1 Environment
 ```bash

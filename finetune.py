@@ -343,7 +343,15 @@ def finetune(args, tokenizer: AutoTokenizer, model: deepspeed.DeepSpeedEngine, o
             
             if global_step > args.total_iters:
                 break
-            
+
+    if dist.get_rank() == 0:
+        os.makedirs(args.save, exist_ok=True)
+        print_rank(f"Model save to {args.save}")
+        tokenizer.save_pretrained(args.save)
+        model.module.save_pretrained(args.save)
+
+    dist.barrier()
+
     return model
 
 

@@ -2,9 +2,13 @@ import torch
 import deepspeed
 import logging
 import os
+import time
 import json
 import torch.distributed as dist
 from accelerate import init_empty_weights
+import sys
+import shutil
+from pynvml import *
 
 from transformers import (
     AutoModelForCausalLM,
@@ -33,7 +37,13 @@ from utils import print_args, initialize, load_parallel, get_tokenizer, print_ra
 from minillm import train, Reward
 
 deepspeed.utils.logger.setLevel(logging.WARNING)
-
+# nvmlInit()
+# h = nvmlDeviceGetHandleByIndex(0)
+# info = nvmlDeviceGetMemoryInfo(h)
+# print(f'total    : {info.total}')
+# print(f'free     : {info.free}')
+# print(f'used     : {info.used}')
+            
 def get_model(model_path, model_type, model_parallel, device):
     config = AutoConfig.from_pretrained(model_path)
     if model_parallel:
@@ -48,59 +58,71 @@ def get_model(model_path, model_type, model_parallel, device):
     model.eval()
     return model
 
-def get_server_model(args, device):
+def get_teacher_model(args, device):
     return get_model(args.teacher_model_path, args.model_type, args.model_parallel, device)
 
-def get_client_models(args, device):
-    return [get_model(args.model_path, args.model_type, args.model_parallel, device) for _ in range(args.num_clients)]
+def get_student_model(args, device):
+    return get_model(args.model_path, args.model_type, args.model_parallel, device)
 
-def client_fine_tune(clients, args, tokenizer, finetune_dataset, ds_config):
-    # fine tune sequentially because i dont care
-    for i, client_model in enumerate(clients):
-        print_rank("*" * 100)
-        print_rank(f"Fine-tuning client {i + 1} / {len(clients)} ...")
-        my_finetune(args, client_model, tokenizer, finetune_dataset, ds_config)
+def get_student_models(args, device, fl_round):
+    return [get_model(os.path.join(args.save, str(student + 1), "_" + str(fl_round)), args.model_type, args.model_parallel, device) for student in range(args.num_clients)]
 
+def fine_tune(model, args, tokenizer, finetune_dataset, ds_config):
+    return my_finetune(args, model, tokenizer, finetune_dataset, ds_config)
 
-def client2server_kd(clients, server_model, args, tokenizer, ds_config):
+def student2teacher_kd(students, teacher_model, args, tokenizer, ds_config, fl_round):
     print_rank("*" * 100)
-    print_rank(f"Running client2server_kd...")
-    # create megaclient
-    megaclient = CombinedClients(clients)
+    print_rank(f"Running student2teacher_kd...")
+    # create megastudent
+    megastudent = CombinedClients(students)
+    reward = Reward(args, tokenizer, megastudent)
 
-    reward = Reward(args, tokenizer, megaclient)
-    
+    prev_save = args.save
+    args.save = os.path.join(args.save, str(0), str(fl_round))
+
     train_minillm(
         args=args,
         tokenizer=tokenizer,
         reward_fn=reward.reward_fn,
-        teacher_model=megaclient,
-        student_model=server_model,
+        teacher_model=megastudent,
+        student_model=teacher_model,
         ds_config=ds_config,
+
+        ## TODO: We will modify the following lines to point to the directory based on rank.
+        ## Construction of the directories should be the output of chengs data spliting script given n ranks
         prompt_data=args.prompt_data_dir,
         eval_prompt_data=args.prompt_data_dir,
         lm_data=args.lm_data_dir,
         eval_lm_data=args.lm_data_dir,
     )
 
-def server2client_kd(client_models, server_model, args, tokenizer, ds_config):
-    reward = Reward(args, tokenizer, server_model)
-    
-    for i, client_model in enumerate(client_models):
-        print_rank("*" * 100)
-        print_rank(f"server2client_kd to client {i + 1} / {len(client_models)}...")
-        train_minillm(
-            args=args,
-            tokenizer=tokenizer,
-            reward_fn=reward.reward_fn,
-            teacher_model=server_model,
-            student_model=client_model,
-            ds_config=ds_config,
-            prompt_data=args.prompt_data_dir,
-            eval_prompt_data=args.prompt_data_dir,
-            lm_data=args.lm_data_dir,
-            eval_lm_data=args.lm_data_dir,
-        )
+    args.save = prev_save
+
+def teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank):
+
+    reward = Reward(args, tokenizer, teacher_model)
+    print_rank(f"teacher2student_kd to student @ rank {rank}...")
+
+    prev_save = args.save
+    args.save = os.path.join(args.save, str(rank), str(fl_round))
+
+    train_minillm(
+        args=args,
+        tokenizer=tokenizer,
+        reward_fn=reward.reward_fn,
+        teacher_model=teacher_model,
+        student_model=student_model,
+        ds_config=ds_config,
+
+        ## TODO: We will modify the following lines to point to the directory based on rank.
+        ## Construction of the directories should be the output of chengs data spliting script given n ranks
+        prompt_data=args.prompt_data_dir,
+        eval_prompt_data=args.prompt_data_dir,
+        lm_data=args.lm_data_dir,
+        eval_lm_data=args.lm_data_dir,
+    )
+
+    args.save = prev_save
 
 def setup_ds(args):
     with open(args.deepspeed_config, "r") as f:
@@ -112,13 +134,12 @@ def setup_ds(args):
     ds_config["steps_per_print"] = 10000000
     return ds_config
 
-
 def setup_args():
     args = get_args()
     initialize(args)
     os.makedirs(args.save, exist_ok=True)
     if dist.get_rank() == 0:
-        print_args(args)
+        # print_args(args)
         with open(os.path.join(args.save, "args.json"), "w") as f:
             json.dump(vars(args), f)
             
@@ -137,30 +158,98 @@ def setup_args():
     args.mid_log_num = 0
     return ds_config, args
 
+def waitFor(path):
+    while not os.path.exists(path):
+        time.sleep(5)
+
+    while os.stat(path).st_size == 0:
+        time.sleep(5)
+
+    time.sleep(10)
+
+def removeDir(dir_to_remove):
+    if os.path.exists(dir_to_remove) and os.path.isdir(dir_to_remove):
+        shutil.rmtree(dir_to_remove)
+
 def main():
+    # sys.stdout.write("Launched process %d of %d on %s.\n" % (rank, size, name))
+
     ds_config, args = setup_args()
     device = torch.cuda.current_device()
-    
-    server_model = get_server_model(args, device)
-    client_models = get_client_models(args, device)
+
+    rank = args.fl_rank
+    size = args.num_clients
+
+    print_rank(f"Launched process {rank}\n")
     
     tokenizer = get_tokenizer(args)
-    finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer)
+    finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer, rank)
 
-    for round in range(args.fl_rounds):
-        print_rank("*" * 100)
-        print_rank(f"COMMUNICATION ROUND {round + 1} / {args.fl_rounds}")
-        print_rank("*" * 100)
-        # first fine-tune the clients
-        client_fine_tune(client_models, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
+    # start_at = 0
+    # args.teacher_model_path = os.path.join(args.save, str(0), str(start_at))
+    # if rank > 0 : args.model_path = os.path.join(args.save, str(rank), str(start_at))
 
-        # then KD to the server
-        client2server_kd(client_models, server_model, args, tokenizer, ds_config)
+    for fl_round in range(0, args.fl_rounds):
+        if rank == 0 : print_rank("*" * 100)
+        if rank == 0 : print_rank(f"FL MINILLM ROUND {fl_round + 1} / {args.fl_rounds}")
+        if rank == 0 : print_rank("*" * 100)
 
-        # then server KD to the clients
-        server2client_kd(client_models, server_model, args, tokenizer, ds_config)
+        # Step 0: Load respective model
+
+        student_model = get_student_model(args, device) if rank > 0 else None
+        teacher_model = get_teacher_model(args, device)
+
+        print_rank(f"STEP 0 COMPLETE @ {rank}")
+
+        # Step 1: Fine tune seperately and save to results/rank/fl_round/
+
+        finetuning_args.save = os.path.join(args.save, str(rank), "_" + str(fl_round))
+        os.makedirs(finetuning_args.save, exist_ok=True)
+
+        if rank > 0 : student_model = fine_tune(student_model, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
+        if rank < 1 : teacher_model = fine_tune(teacher_model, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
+
+        print_rank(f"STEP 1 COMPLETE @ {rank}")
+
+        # Step 2: Load all clients when they are ready onto rank 0
+
+        if rank == 0:
+            for student in range(size):
+                path_to_wait = os.path.join(args.save, str(student + 1), "_" + str(fl_round))
+                waitFor(path_to_wait)
+
+        print_rank(f"STEP 2 COMPLETE @ {rank}")
+
+        # Step 3: Ensemble and Train teacher using MiniLLM
+
+        if rank == 0 :
+            student_models = get_student_models(args, device, fl_round)
+            student2teacher_kd(student_models, teacher_model, args, tokenizer, ds_config, fl_round)
+
+        print_rank(f"STEP 3 COMPLETE @ {rank}")
+
+        # Step 4: Once teacher is ready, load teacher on all ranks
+
+        args.teacher_model_path = os.path.join(args.save, str(0), str(fl_round))
+        waitFor(args.teacher_model_path)
+        teacher_model = get_teacher_model(args, device)
+
+        print_rank(f"STEP 4 COMPLETE @ {rank}")
+
+        # Step 5: Train Students seperately using MiniLLM and update path
+
+        if rank > 0 : 
+            teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank)
+            args.model_path = os.path.join(args.save, str(rank), str(fl_round))
+
+        print_rank(f"STEP 5 COMPLETE @ {rank}")
+
+    for fl_round in range(args.fl_rounds - 1):
+
+        removeDir(os.path.join(args.save, str(rank), str(fl_round)))
+        removeDir(os.path.join(args.save, str(rank), "_" + str(fl_round)))
+
+    removeDir(os.path.join(args.save, str(rank), "_" + str(args.fl_rounds - 1)))
     
-    # TODO some kind of evaluation
-
 if __name__ == "__main__":
     main()
