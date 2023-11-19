@@ -244,12 +244,13 @@ def main():
 
         print_rank(f"STEP 5 COMPLETE @ {rank}")
 
-    for fl_round in range(args.fl_rounds - 1):
+    if rank == 0:
+        for fl_round in range(args.fl_rounds - 1):
 
-        removeDir(os.path.join(args.save, str(rank), str(fl_round)))
-        removeDir(os.path.join(args.save, str(rank), "_" + str(fl_round)))
+            removeDir(os.path.join(args.save, str(rank), str(fl_round)))
+            removeDir(os.path.join(args.save, str(rank), "_" + str(fl_round)))
 
-    removeDir(os.path.join(args.save, str(rank), "_" + str(args.fl_rounds - 1)))
-    
+        removeDir(os.path.join(args.save, str(rank), "_" + str(args.fl_rounds - 1)))
+        
 if __name__ == "__main__":
     main()
