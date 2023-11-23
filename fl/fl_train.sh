@@ -45,7 +45,7 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
 
 # model
 # default to working directory
-BASE_PATH=${1-$(PWD)}
+BASE_PATH=${1-"."}
 
 CKPT_NAME="distilgpt-student"
 CKPT=${2-"gpt2"}
