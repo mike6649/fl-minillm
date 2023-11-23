@@ -1,10 +1,10 @@
 #! /bin/bash
 
 MASTER_ADDR=localhost
-MASTER_PORT=${3-2012}
+MASTER_PORT=2012
 NNODES=1
 NODE_RANK=0
-GPUS_PER_NODE=2
+GPUS_PER_NODE=1
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
                   --nnodes $NNODES \
@@ -13,23 +13,20 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
                   --master_port $MASTER_PORT"
 
 # model
-BASE_PATH=${1-"/storage/ice1/5/5/rarockiasamy3/fl-minillm"}
-# CKPT_NAME="distilgpt2"
-# CKPT="distilgpt2"
-# TEACHER_CKPT_NAME="base"
-# TEACHER_CKPT="${BASE_PATH}/results/gpt2/train/sft/e10-bs2-lr0.0005-G1-N1-NN1/28585"
+BASE_PATH=${1-"."}
 
 CKPT_NAME="distilgpt-student"
-CKPT="${BASE_PATH}/checkpoints/distilgpt2/"
+CKPT=${2-"gpt2"}
 
 TEACHER_CKPT_NAME="distilgpt-teacher"
-TEACHER_CKPT="${BASE_PATH}/results/distilgpt2/train/sft/e1-bs2-lr0.0005-G1-N1-NN1/5717/"
+TEACHER_CKPT=${3-"gpt2-xl"}
 
 # data
-PROMPT_DATA_DIR="${BASE_PATH}/processed_data/dolly/prompt/distilgpt2/"
-LM_DATA_DIR="${BASE_PATH}/processed_data/openwebtext/distilgpt2/512/10K/"
+PROMPT_DATA_DIR="${BASE_PATH}/processed_data/dolly/prompt/gpt2/"
+LM_DATA_DIR="${BASE_PATH}/processed_data/openwebtext/gpt2/512/10K/"
 # runtime
 SAVE_PATH="${BASE_PATH}/results/distilgpt2/train/fl-minillm/"
+
 # hp
 GRAD_ACC=1
 BATCH_SIZE=4
