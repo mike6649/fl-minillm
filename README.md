@@ -1,26 +1,26 @@
 # MiniLLM: Knowledge Distillation of Large Language Models
-
-![Method](./figures/method.png)
-## 1 Environment
+### Allocate GPUs on PACE
 ```bash
-pip3 install -e transformers/
-pip3 install torch==2.0.1
-pip3 install deepspeed==0.10.0
-pip3 install torchvision==0.15.2
-pip3 install nltk
-pip3 install numerize
-pip3 install rouge-score
-pip3 install torchtyping
-pip3 install rich
-pip3 install accelerate
-pip3 install datasets
-pip3 install sentencepiece
-pip3 install protobuf==3.20.3
-pip3 install peft
+salloc -N2 -t1:15:00 --mem-per-gpu=12G --ntasks-per-node=2 --gpus-per-task=2
 ```
-or
+### Run Vanilla MiniLLM (No FL)
 ```bash
-bash install.sh
+srun bash scripts/distilgpt2/minillm/train_large_xl.sh . 2012 2
+```
+### Run FL-MiniLLM Training
+```bash
+srun bash fl/fl_train.sh . <client-checkpoint (optional)> <server-checkpoint (optional)>
+# example
+srun bash fl/fl_train.sh
+# example specifying fl-minillm directory, client checkpoint and server checkpoint
+srun bash fl/fl_train.sh . gpt2 gpt2-xl
+```
+
+`bash fl/fl_train.sh ~/scratch/fl-minillm`
+
+## 1 Environment
+```
+pip install -r requirements.txt
 ```
 
 ## 2 Data

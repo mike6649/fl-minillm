@@ -297,11 +297,11 @@ class PPOTrainer():
                         self.global_iter_count % self.args.save_interval == 0):
                         self.save()
 
-                    # eval
-                    if self.iter_count % self.args.gradient_accumulation_steps == 0 and \
-                        ((self.global_iter_count < 1000 and (self.global_iter_count % 100 == 0)) or \
-                        (self.global_iter_count % self.args.eval_interval == 0)):
-                        self.evaluate()
+                    # # eval
+                    # if self.iter_count % self.args.gradient_accumulation_steps == 0 and \
+                    #     ((self.global_iter_count < 1000 and (self.global_iter_count % 100 == 0)) or \
+                    #     (self.global_iter_count % self.args.eval_interval == 0)):
+                    #     self.evaluate()
 
                     elapsed_time = forward_time + backward_time + step_time
                     
@@ -548,7 +548,7 @@ class PPOTrainer():
         """Creates a checkpoint of the optimizer, scheduler and model"""
         """Creates checkpoint of optimizer, scheduler and a model"""
         base_ckpt_path = directory or self.args.save
-        ckpt_dir = os.path.join(base_ckpt_path, f"{self.global_iter_count}")
+        ckpt_dir = base_ckpt_path # os.path.join(base_ckpt_path, f"{self.global_iter_count}")
         os.makedirs(ckpt_dir, exist_ok=True)
         if self.args.model_parallel:
             if get_rank() == 0:

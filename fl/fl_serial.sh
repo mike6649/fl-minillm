@@ -1,61 +1,33 @@
 #! /bin/bash
 
 MASTER_ADDR=localhost
-# MASTER_PORT=${3-2012}
+MASTER_PORT=${3-2012}
 NNODES=1
 NODE_RANK=0
 GPUS_PER_NODE=2
-
-PID_FILE="slurm_pids_$SLURM_JOB_ID.txt"
-
-> "$PID_FILE"
-sleep 1
-
-# Write the current task's PID to the file
-echo $SLURM_TASK_PID >> "$PID_FILE"
-
-# Wait to allow all tasks to write their PIDs
-sleep 10
-
-# Read all PIDs and find the minimum
-MIN_PID=$(sort -n "$PID_FILE" | head -n 1)
-
-NEW_MASTER_PORT=$(($SLURM_TASK_PID % 65536))
-NEW_RANK=$(($SLURM_TASK_PID % $MIN_PID))
-
-# Read all PIDs, sort them, and find the rank of the current task's PID
-# Save the sorted PIDs in an array
-readarray -t sorted_pids < <(sort -n "$PID_FILE")
-
-# Find the rank of the current task
-for i in "${!sorted_pids[@]}"; do
-    if [[ "${sorted_pids[$i]}" == "$SLURM_TASK_PID" ]]; then
-        NEW_RANK=$i
-        break
-    fi
-done
-
-# echo $NEW_RANK
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
                   --nnodes $NNODES \
                   --node_rank $NODE_RANK \
                   --master_addr $MASTER_ADDR \
-                  --master_port $NEW_MASTER_PORT"
+                  --master_port $MASTER_PORT"
 
 # model
-# default to working directory
-BASE_PATH=${1-$(PWD)}
+BASE_PATH=${1-"/storage/ice1/5/5/rarockiasamy3/fl-minillm"}
+# CKPT_NAME="distilgpt2"
+# CKPT="distilgpt2"
+# TEACHER_CKPT_NAME="base"
+# TEACHER_CKPT="${BASE_PATH}/results/gpt2/train/sft/e10-bs2-lr0.0005-G1-N1-NN1/28585"
 
 CKPT_NAME="distilgpt-student"
-CKPT=${2-"gpt2"}
+CKPT="${BASE_PATH}/checkpoints/distilgpt2/"
 
 TEACHER_CKPT_NAME="distilgpt-teacher"
-TEACHER_CKPT=${3-"gpt2-xl"}
+TEACHER_CKPT="${BASE_PATH}/results/distilgpt2/train/sft/e1-bs2-lr0.0005-G1-N1-NN1/5717/"
 
 # data
-PROMPT_DATA_DIR="${BASE_PATH}/processed_data/dolly/prompt/gpt2/"
-LM_DATA_DIR="${BASE_PATH}/processed_data/openwebtext/gpt2/512/10K/"
+PROMPT_DATA_DIR="${BASE_PATH}/processed_data/dolly/prompt/distilgpt2/"
+LM_DATA_DIR="${BASE_PATH}/processed_data/openwebtext/distilgpt2/512/10K/"
 # runtime
 SAVE_PATH="${BASE_PATH}/results/distilgpt2/train/fl-minillm/"
 # hp
@@ -65,7 +37,7 @@ CHUNK_SIZE=16
 
 
 OPTS=""
-OPTS+=" --fl-rank ${NEW_RANK}"
+OPTS+=" --fl-rank 0"
 # model
 OPTS+=" --base-path ${BASE_PATH}"
 OPTS+=" --model-path ${CKPT}"

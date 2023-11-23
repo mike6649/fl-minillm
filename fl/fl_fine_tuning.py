@@ -36,12 +36,12 @@ def my_finetune(args, model, tokenizer, dataset, ds_config=None):
     return model
 
 
-def setup_fine_tuning(all_args, tokenizer):
+def setup_fine_tuning(all_args, tokenizer, rank):
     args = copy.deepcopy(all_args)
     args.epochs = args.fine_tune_epochs
     args.do_train = True
     
-    args.data_dir = args.prompt_data_dir
+    args.data_dir = args.prompt_data_dir # TODO: modfiy data dir to include rank (should be output of chengs script)
     dataset = finetune.prepare_dataset(args, tokenizer)   # TODO this should be 10 separate datasets or whathaveyou
     dp_world_size = mpu.get_data_parallel_world_size() if args.model_parallel else dist.get_world_size()
     args.train_iters_per_epoch = int(len(dataset["train"]) / (args.batch_size * dp_world_size * args.gradient_accumulation_steps))
@@ -50,7 +50,7 @@ def setup_fine_tuning(all_args, tokenizer):
 
 def main():
     args = arguments.get_args()
-    print_args(args)
+    # print_args(args)
     dp_world_size = mpu.get_data_parallel_world_size() if args.model_parallel else dist.get_world_size()
     args.train_iters_per_epoch = int(len(dataset["train"]) / (args.batch_size * dp_world_size * args.gradient_accumulation_steps))
     args.total_iters = args.train_iters_per_epoch * args.epochs
