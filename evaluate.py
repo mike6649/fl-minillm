@@ -113,4 +113,13 @@ def main():
     
     
 if __name__ == "__main__":
-    main()
+    # run me:
+    # torchrun evaluate.py --json-data --model-path <model-path>
+    args = get_args()
+    initialize(args)
+    model_path = args.model_path
+    device = torch.cuda.current_device()
+    data_dir = "processed_data/dolly/prompt/gpt2"
+    
+    metrics = evaluate(model_path, device, data_dir, args)
+    print_rank(metrics)
