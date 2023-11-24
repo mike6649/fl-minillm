@@ -3,45 +3,75 @@ import os
 
 import torch
 import torch.distributed as dist
+from data_utils.prompt_datasets import PromptDataset
 import deepspeed
 
 import json
 
-from transformers import mpu
+from transformers import AutoConfig, AutoModelForCausalLM, ParallelGPT2LMHeadModel, AutoTokenizer
 
 from arguments import get_args
+from gpt4_evaluate import get_metrics_gpt
+from rouge_metric import compute_metrics
 
 from utils import initialize, print_args
 from utils import print_rank
 from utils import save_rank
-from utils import get_tokenizer, get_model
+from utils import get_tokenizer, get_model, load_parallel
 
-from evaluate_main import evaluate_main, prepare_dataset_main
-
+from evaluate_main import evaluate_main, prepare_dataset_main, run_model
+from accelerate import load_checkpoint_and_dispatch, init_empty_weights
 
 torch.set_num_threads(4)
 
 
-def setup_model(args, ds_config, device):
-    # get the model
-    model = get_model(args, device)
-    # get the optimizer and lr_scheduler
-
-    optimizer, lr_scheduler = None, None
-        
-    model, _, _, _ = deepspeed.initialize(
-        model=model,
-        optimizer=optimizer,
-        args=args,
-        lr_scheduler=lr_scheduler,
-        mpu=mpu if args.model_parallel else None,
-        config_params=ds_config
-    )
-    
-    # get the memory usage
-    print_rank("Model mem\n", torch.cuda.memory_summary())
+def load_model(model_path, device, model_parallel=True):
+    config = AutoConfig.from_pretrained(model_path)
+    if model_parallel:
+        config.is_model_parallel = True
+        with init_empty_weights():
+            model = ParallelGPT2LMHeadModel(config).half()
+        load_parallel(model, model_path)
+    else:
+        config.is_model_parallel = False
+        model = AutoModelForCausalLM.from_pretrained(model_path, config=config, device_map={"": device}, torch_dtype=torch.float16)
     return model
 
+def load_tokenizer(model_path):
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+    return tokenizer
+
+def _inner_evaluate(args, tokenizer, model, dataset: PromptDataset, device):
+    lm_loss, query_ids, response_ids = run_model(args, tokenizer, model, dataset, device)
+    query_strs = tokenizer.batch_decode(query_ids, skip_special_tokens=True)
+    response_strs = tokenizer.batch_decode(response_ids, skip_special_tokens=True)
+    all_preds = [[]]
+    for q, r in zip(query_strs, response_strs):
+        all_preds[0].append((q, q + r))
+    all_responses = [] 
+    for p in all_preds[0]:
+        q, r = p
+        r = r[len(q):]
+        idx = r.find("<|endoftext|>")
+        if idx >= 0:
+            r = r[:idx]
+        all_responses.append(r.replace("<n>", "\n").strip())
+    gen_res: dict = compute_metrics(all_responses, dataset.answers)
+    # {"exact_match": em, "rougeL": rougeL}
+    gen_res["loss"] = lm_loss
+    # TODO gpt4 score
+    # get_metrics_gpt()
+    gen_res = {k: round(v, 4) for k, v in gen_res.items()}
+    return gen_res
+
+
+def evaluate(model_path, device, data_dir, args, tokenizer=None):
+    if tokenizer is None:
+        tokenizer = load_tokenizer(model_path)
+    dataset = PromptDataset(args, tokenizer, "valid", data_dir, args.dev_num)
+    model = load_model(model_path, device, args.model_parallel)
+    return _inner_evaluate(args, tokenizer, model, dataset, device)
 
 def main():
     torch.backends.cudnn.enabled = False
@@ -73,17 +103,11 @@ def main():
 
     # get the tokenizer
     tokenizer = get_tokenizer(args)
-    if args.type == "eval_main":
-        dataset = prepare_dataset_main(
-            args,
-            tokenizer,
-        )
-    else:
-        raise NotImplementedError
-    model = setup_model(args, ds_config, device)
+    dataset = PromptDataset(args, tokenizer, "valid", args.data_dir, args.dev_num)
+    model = load_model(args.model_path, device, args.model_parallel)
     
     if args.type == "eval_main":
-        evaluate_main(args, tokenizer, model, dataset["test"], "test", 0, device)
+        evaluate_main(args, tokenizer, model, dataset, device)
     else:
         raise NotImplementedError
     
