@@ -8,6 +8,7 @@ import os
 from evaluate import _inner_evaluate
 
 import numpy as np
+from fl.baselines.output_result import save_run_as_json
 
 from fl.fl_fine_tuning import setup_fine_tuning
 from train_fl_minillm import fine_tune, get_student_model, setup_args
@@ -33,7 +34,7 @@ def client(args, ds_config, rank):
     finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer, rank)
     data_dir = "processed_data/dolly/prompt/gpt2"
     args.json_data = True
-    eval_dataset = PromptDataset(args, tokenizer, "valid", data_dir, 10)
+    eval_dataset = PromptDataset(args, tokenizer, "valid", data_dir, args.dev_num)
     model = get_student_model(args, device)
 
     class FlowerClient(fl.client.NumPyClient):
@@ -79,6 +80,7 @@ def server(args):
         config=fl.server.ServerConfig(num_rounds=args.fl_rounds),
         strategy=strategy,
     )
+    save_run_as_json(args, history)
 
 
 def main():
@@ -90,7 +92,7 @@ def main():
     if (rank == 0):
         server(args)
     else:
-        client(args,ds_config, rank)
+        client(args, ds_config, rank)
 
 
 if __name__ == "__main__":

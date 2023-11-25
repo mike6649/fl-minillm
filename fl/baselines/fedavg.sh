@@ -1,8 +1,8 @@
 #! /bin/bash
 
-NUM_CLIENTS=2
+NUM_CLIENTS=3
 FINE_TUNE_EPOCHS=1
-FL_ROUNDS=2
+FL_ROUNDS=10
 
 PID_FILE="slurm_pids_$SLURM_JOB_ID.txt"
 
@@ -42,9 +42,9 @@ CKPT_NAME="distilgpt-student"
 CKPT=${2-"gpt2"}
 
 # data
-PROMPT_DATA_DIR="${BASE_PATH}/fl_processed_data/prompt/2clients/"
+PROMPT_DATA_DIR="${BASE_PATH}fl_processed_data/gpt2/"
 # runtime
-SAVE_PATH="${BASE_PATH}/results/distilgpt2/train/fl-minillm/"
+SAVE_PATH="${BASE_PATH}/results/gpt2/train/fedavg/"
 # hp
 GRAD_ACC=1
 BATCH_SIZE=4
