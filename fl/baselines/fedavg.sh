@@ -1,7 +1,7 @@
 #! /bin/bash
 
 NUM_CLIENTS=2
-FINE_TUNE_EPOCHS=2
+FINE_TUNE_EPOCHS=1
 FL_ROUNDS=2
 
 PID_FILE="slurm_pids_$SLURM_JOB_ID.txt"
@@ -11,13 +11,13 @@ sleep 1
 
 # Write the current task's PID to the file
 echo $SLURM_TASK_PID >> "$PID_FILE"
-
 # Wait to allow all tasks to write their PIDs
 sleep 10
 
 # Read all PIDs and find the minimum
 MIN_PID=$(sort -n "$PID_FILE" | head -n 1)
 
+NEW_MASTER_PORT=$(($SLURM_TASK_PID % 65536))
 NEW_RANK=$(($SLURM_TASK_PID % $MIN_PID))
 
 # Read all PIDs, sort them, and find the rank of the current task's PID
@@ -31,6 +31,8 @@ for i in "${!sorted_pids[@]}"; do
         break
     fi
 done
+
+DISTRIBUTED_ARGS="--master_port $NEW_MASTER_PORT"
 
 # model
 # default to working directory
@@ -96,7 +98,7 @@ export WANDB_DISABLED=True
 export TF_CPP_MIN_LOG_LEVEL=3
 export PYTHONPATH=${BASE_PATH}
 
-CMD="python3 ${BASE_PATH}/fl/baselines/fedavg_client.py ${OPTS} $@"
+CMD="torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/fl/baselines/fedavg_client.py ${OPTS} $@"
 
 echo ${CMD}
 echo "PYTHONPATH=${PYTHONPATH}"

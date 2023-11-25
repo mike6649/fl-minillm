@@ -3,11 +3,11 @@ from typing import List
 import torch
 from data_utils.prompt_datasets import PromptDataset
 import flwr as fl
- import os
+import os
 
 from evaluate import _inner_evaluate
 
-from numpy import np
+import numpy as np
 
 from fl.fl_fine_tuning import setup_fine_tuning
 from train_fl_minillm import fine_tune, get_student_model, setup_args
@@ -21,21 +21,25 @@ def set_parameters(net, parameters: List[np.ndarray]):
     params_dict = zip(net.state_dict().keys(), parameters)
     state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
     net.load_state_dict(state_dict, strict=True)
+    print("loaded state dict")
+    assert hasattr(net, "generate")
 
 
 def client(args, ds_config, rank):
 
     tokenizer = get_tokenizer(args)
     device = torch.cuda.current_device()
-    args.prompt_data_dir = os.path.join(args.prompt_data_dir, rank - 1)
+    args.prompt_data_dir = os.path.join(args.prompt_data_dir, str(rank - 1), "")
     finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer, rank)
     data_dir = "processed_data/dolly/prompt/gpt2"
-    eval_dataset = PromptDataset(args, tokenizer, "valid", data_dir, args.dev_num)
+    args.json_data = True
+    eval_dataset = PromptDataset(args, tokenizer, "valid", data_dir, 10)
     model = get_student_model(args, device)
 
     class FlowerClient(fl.client.NumPyClient):
         def __init__(self, model):
             self.net = model
+            assert hasattr(self.net, "generate")
 
         def get_parameters(self, config):
             return get_parameters(self.net)
@@ -43,7 +47,7 @@ def client(args, ds_config, rank):
         def fit(self, parameters, config):
             set_parameters(self.net, parameters)
             self.net = fine_tune(self.net, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
-            return get_parameters(self.net), len(self.trainloader), {}
+            return get_parameters(self.net), len(fine_tune_dataset), {}
 
         def evaluate(self, parameters, config):
             set_parameters(self.net, parameters)
@@ -56,11 +60,11 @@ def client(args, ds_config, rank):
 def server(args):
     def weighted_average(metrics):
         # Multiply accuracy of each client by number of examples used
-        accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
+        accuracies = [num_examples * m["rougeL"] for num_examples, m in metrics]
         examples = [num_examples for num_examples, _ in metrics]
 
         # Aggregate and return custom metric (weighted average)
-        return {"accuracy": sum(accuracies) / sum(examples)}
+        return {"rougeL": sum(accuracies) / sum(examples)}
     
     strategy = fl.server.strategy.FedAvg(
         fraction_fit=1.0,
