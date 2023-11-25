@@ -17,12 +17,12 @@ def get_parameters(net) -> List[np.ndarray]:
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
 
 
-def set_parameters(net, parameters: List[np.ndarray]):
+def set_parameters(args, device, parameters: List[np.ndarray]):
+    net = get_student_model(args, device)
     params_dict = zip(net.state_dict().keys(), parameters)
     state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
     net.load_state_dict(state_dict, strict=True)
-    print("loaded state dict")
-    assert hasattr(net, "generate")
+    return net
 
 
 def client(args, ds_config, rank):
@@ -45,12 +45,12 @@ def client(args, ds_config, rank):
             return get_parameters(self.net)
 
         def fit(self, parameters, config):
-            set_parameters(self.net, parameters)
+            self.net = set_parameters(args, device, parameters)
             self.net = fine_tune(self.net, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
             return get_parameters(self.net), len(fine_tune_dataset), {}
 
         def evaluate(self, parameters, config):
-            set_parameters(self.net, parameters)
+            self.net = set_parameters(args, device, parameters)
             results = _inner_evaluate(args, tokenizer, self.net, eval_dataset, device)
             # {'exact_match': 1.7, 'rougeL': 19.7316, 'loss': 3.5203}
             return float(results["loss"]), len(eval_dataset), results
