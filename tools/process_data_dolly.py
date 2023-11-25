@@ -8,7 +8,7 @@ from numerize.numerize import numerize
 import numpy as np
 from data_utils.indexed_dataset import make_builder
 from transformers import AutoTokenizer
-from arguments import get_args
+from fl.fl_arguments import get_args
 
 
 # 1. Implement an Encoder, which gives it a line of input data and it returns you the tokenized result.
@@ -69,72 +69,84 @@ def main():
         }
     
     for split in all_data:
-        
-        # encoder use the tokenizer to encode data
-        encoder = Encoder(args)
+        # Split data for each client
+        split_data = np.array_split(all_data[split], args.num_clients + 1)
 
-        # 2. Mapping all datas with Encoder, with the help of multiprocessing
-        pool = multiprocessing.Pool(processes=args.data_process_workers, initializer=encoder.initializer)
-        encoded_docs = pool.imap_unordered(encoder.encode, all_data[split], chunksize=50)
-        proc_start = time.time()
-        total_bytes_processed = 0
-        
-        bin_file = os.path.join(args.processed_data_dir, f"{split}_{0}.bin")
-        idx_file = os.path.join(args.processed_data_dir, f"{split}_{0}.idx")
+        for client_id in range(args.num_clients + 1):
+            client_data = split_data[client_id]
 
-        binary_builder = make_builder(bin_file, impl="mmap", dtype=np.uint16)
+            # Create directories for each client
+            client_processed_data_dir = os.path.join(args.processed_data_dir, str(client_id))
+            os.makedirs(client_processed_data_dir, exist_ok=True)
 
-        # put tokenized data into binary_builder
-        inst_num = 0
-        print("#"*10, split, "#"*10)
-        
-        prompt_lens = []
-        response_lens = []
-        
-        json_file = open(os.path.join(args.processed_data_dir, f"{split}.jsonl"), "w")
-        
-        for lid, (line, prompt_str, prompt, response, bytes_processed) in enumerate(encoded_docs):
-            total_bytes_processed += bytes_processed
-            if prompt is None:
-                continue
+            # Initialize encoder and multiprocessing pool
+            encoder = Encoder(args)
+            pool = multiprocessing.Pool(processes=args.data_process_workers, initializer=encoder.initializer)
+            encoded_docs = pool.imap_unordered(encoder.encode, client_data, chunksize=50)
+
+            print(encoded_docs)
+
+            proc_start = time.time()
+            total_bytes_processed = 0
             
-            if args.only_prompt:
-                if len(prompt) < args.max_length:
-                    binary_builder.add_item(torch.IntTensor(prompt))
-                else:
+            # Ensure file paths include the client_id
+            bin_file = os.path.join(client_processed_data_dir, f"{split}_{0}.bin")
+            idx_file = os.path.join(client_processed_data_dir, f"{split}_{0}.idx")
+            json_file = open(os.path.join(client_processed_data_dir, f"{split}.jsonl"), "w")
+
+            binary_builder = make_builder(bin_file, impl="mmap", dtype=np.uint16)
+
+            # put tokenized data into binary_builder
+            inst_num = 0
+            print("#"*10, split, "#"*10)
+            
+            prompt_lens = []
+            response_lens = []
+            
+            json_file = open(os.path.join(client_processed_data_dir, f"{split}.jsonl"), "w")
+            
+            for lid, (line, prompt_str, prompt, response, bytes_processed) in enumerate(encoded_docs):
+                total_bytes_processed += bytes_processed
+                if prompt is None:
                     continue
-            else:
-                binary_builder.add_item(torch.IntTensor(prompt + [-1] + response))
-
-            json_file.write(json.dumps({
-                "instruction": line["instruction"],
-                "prompt": prompt_str,
-                "input": line["input"],
-                "output": line["output"],
-            }) + "\n")
-
-            prompt_lens.append(len(prompt))
-            response_lens.append(len(response))
-
-            inst_num += 1
-            if lid % 1000 == 0:
-                current = time.time()
-                elapsed = current - proc_start
-                mbs = total_bytes_processed / elapsed / 1024 / 1024
-                print(f"Processed {lid} documents. {inst_num} instances.",
-                    f"({lid/elapsed} docs/s, {mbs} MB/s).",
-                    file=sys.stderr)
-
-        # finish compressing tokenized data into `bin_file`, and generate meta information into `idx_file`
-        binary_builder.finalize(idx_file)
-
-        # close multiproceessing mapping
-        pool.close()
-        json_file.close()
                 
-        print("Data num", len(prompt_lens))
-        print("Prompt lengths.", "Mean:", np.mean(prompt_lens), "Max:", np.max(prompt_lens), "Min:", np.min(prompt_lens))
-        print("Response", "Mean:", np.mean(response_lens), "Max:", np.max(response_lens), "Min:", np.min(response_lens))
+                if args.only_prompt:
+                    if len(prompt) < args.max_length:
+                        binary_builder.add_item(torch.IntTensor(prompt))
+                    else:
+                        continue
+                else:
+                    binary_builder.add_item(torch.IntTensor(prompt + [-1] + response))
+
+                json_file.write(json.dumps({
+                    "instruction": line["instruction"],
+                    "prompt": prompt_str,
+                    "input": line["input"],
+                    "output": line["output"],
+                }) + "\n")
+
+                prompt_lens.append(len(prompt))
+                response_lens.append(len(response))
+                print(lid)
+                inst_num += 1
+                if lid % 1000 == 0:
+                    current = time.time()
+                    elapsed = current - proc_start
+                    mbs = total_bytes_processed / elapsed / 1024 / 1024
+                    print(f"Processed {lid} documents. {inst_num} instances.",
+                        f"({lid/elapsed} docs/s, {mbs} MB/s).",
+                        file=sys.stderr)
+
+            # finish compressing tokenized data into `bin_file`, and generate meta information into `idx_file`
+            binary_builder.finalize(idx_file)
+
+            # close multiproceessing mapping
+            pool.close()
+            json_file.close()
+                    
+            print("Data num", len(prompt_lens))
+            print("Prompt lengths.", "Mean:", np.mean(prompt_lens), "Max:", np.max(prompt_lens), "Min:", np.min(prompt_lens))
+            print("Response", "Mean:", np.mean(response_lens), "Max:", np.max(response_lens), "Min:", np.min(response_lens))
 
 
 if __name__ == '__main__':
