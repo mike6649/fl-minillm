@@ -40,7 +40,7 @@ CKPT_NAME="distilgpt-student"
 CKPT=${2-"gpt2"}
 
 # data
-PROMPT_DATA_DIR="${BASE_PATH}/fl_processed_data/dolly/prompt/gpt2/"
+PROMPT_DATA_DIR="${BASE_PATH}/fl_processed_data/prompt/2clients/"
 # runtime
 SAVE_PATH="${BASE_PATH}/results/distilgpt2/train/fl-minillm/"
 # hp

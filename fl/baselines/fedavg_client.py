@@ -27,7 +27,7 @@ def client(args, ds_config, rank):
 
     tokenizer = get_tokenizer(args)
     device = torch.cuda.current_device()
-    args.prompt_data_dir = os.path.join(args.prompt_data_dir, rank)
+    args.prompt_data_dir = os.path.join(args.prompt_data_dir, rank - 1)
     finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer, rank)
     data_dir = "processed_data/dolly/prompt/gpt2"
     eval_dataset = PromptDataset(args, tokenizer, "valid", data_dir, args.dev_num)
