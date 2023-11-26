@@ -204,6 +204,7 @@ def main():
 
         # Step 0: Load respective model
 
+        if fl_round > 0: waitForStep(args.save, rank=rank, step=5, fl_round=fl_round - 1)
         student_model = get_student_model(args, device) if rank > 0 else None
         teacher_model = get_teacher_model(args, device)
 
