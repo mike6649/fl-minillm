@@ -235,7 +235,7 @@ def main():
 
         # Step 2: Load all clients when they are ready onto rank 0
 
-        if rank == 0:
+        if rank == 0 and not isStepComplete(args.save, rank, 2, fl_round):
             for student in range(size):
                 waitForStep(args.save, student + 1, 1, fl_round)
 
