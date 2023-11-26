@@ -87,11 +87,8 @@ def student2teacher_kd(students, teacher_model, args, tokenizer, ds_config, fl_r
         teacher_model=megastudent,
         student_model=teacher_model,
         ds_config=ds_config,
-
-        ## TODO: We will modify the following lines to point to the directory based on rank.
-        ## Construction of the directories should be the output of chengs data spliting script given n ranks
-        prompt_data=args.prompt_data_dir,
-        eval_prompt_data=args.prompt_data_dir,
+        prompt_data=args.prompt_data_dir + str(0) + "/",
+        eval_prompt_data=args.prompt_data_dir + str(0) + "/",
         lm_data=args.lm_data_dir,
         eval_lm_data=args.lm_data_dir,
     )
@@ -113,11 +110,8 @@ def teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config,
         teacher_model=teacher_model,
         student_model=student_model,
         ds_config=ds_config,
-
-        ## TODO: We will modify the following lines to point to the directory based on rank.
-        ## Construction of the directories should be the output of chengs data spliting script given n ranks
-        prompt_data=args.prompt_data_dir,
-        eval_prompt_data=args.prompt_data_dir,
+        prompt_data=args.prompt_data_dir + str(0) + "/",
+        eval_prompt_data=args.prompt_data_dir + str(0) + "/",
         lm_data=args.lm_data_dir,
         eval_lm_data=args.lm_data_dir,
     )

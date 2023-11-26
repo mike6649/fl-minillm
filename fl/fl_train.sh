@@ -47,17 +47,17 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
 # default to working directory
 BASE_PATH=${1-"."}
 
-CKPT_NAME="distilgpt-student"
-CKPT=${2-"gpt2"}
+CKPT_NAME="flminillm-student"
+CKPT=${2-"${BASE_PATH}/checkpoints/gpt2/"}
 
-TEACHER_CKPT_NAME="distilgpt-teacher"
-TEACHER_CKPT=${3-"gpt2-xl"}
+TEACHER_CKPT_NAME="flminillm-teacher"
+TEACHER_CKPT=${3-"${BASE_PATH}/checkpoints/gpt2-large/"}
 
 # data
 PROMPT_DATA_DIR="${BASE_PATH}/processed_data/dolly/prompt/gpt2/"
-LM_DATA_DIR="${BASE_PATH}/processed_data/openwebtext/gpt2/512/10K/"
+LM_DATA_DIR="${BASE_PATH}/processed_data/openwebtext/gpt2/512/1M/"
 # runtime
-SAVE_PATH="${BASE_PATH}/results/distilgpt2/train/fl-minillm/"
+SAVE_PATH="${BASE_PATH}/results/gpt2/train/fl-minillm/"
 # hp
 GRAD_ACC=1
 BATCH_SIZE=4
@@ -66,6 +66,10 @@ CHUNK_SIZE=16
 
 OPTS=""
 OPTS+=" --fl-rank ${NEW_RANK}"
+OPTS+=" --num-clients 3"
+OPTS+=" --fl-rounds 1"
+OPTS+=" --epochs 1"
+OPTS+=" --fine-tune-epochs 1"
 # model
 OPTS+=" --base-path ${BASE_PATH}"
 OPTS+=" --model-path ${CKPT}"
@@ -81,7 +85,6 @@ OPTS+=" --lm-data-dir ${LM_DATA_DIR}"
 OPTS+=" --dev-num 1000"
 OPTS+=" --num-workers 0"
 # hp
-OPTS+=" --epochs 1"
 OPTS+=" --total-iters 5000"
 OPTS+=" --kd-ratio 0.5"
 OPTS+=" --batch-size ${BATCH_SIZE}"
