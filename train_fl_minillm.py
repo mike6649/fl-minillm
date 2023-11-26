@@ -72,7 +72,7 @@ def fine_tune(model, args, tokenizer, finetune_dataset, ds_config):
 
 def student2teacher_kd(students, teacher_model, args, tokenizer, ds_config, fl_round):
     print_rank("*" * 100)
-    print_rank(f"Running student2teacher_kd...")
+    print_rank(f"Running student2teacher_kd in ROUND {fl_round}...")
     # create megastudent
     megastudent = CombinedClients(students)
     reward = Reward(args, tokenizer, megastudent)
@@ -98,7 +98,7 @@ def student2teacher_kd(students, teacher_model, args, tokenizer, ds_config, fl_r
 def teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank):
 
     reward = Reward(args, tokenizer, teacher_model)
-    print_rank(f"teacher2student_kd to student @ rank {rank}...")
+    print_rank(f"teacher2student_kd to student @ RANK {rank} in ROUND {fl_round}...")
 
     prev_save = args.save
     args.save = os.path.join(args.save, str(rank), str(fl_round))
@@ -251,7 +251,7 @@ def main():
         # Step 5: Train Students seperately using MiniLLM and update path
 
         if rank > 0 : 
-            # teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank)
+            teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank)
             args.model_path = os.path.join(args.save, str(rank), str(fl_round))
 
         print_rank(f"STEP 5 COMPLETE @ RANK {rank} in ROUND {fl_round}")
