@@ -161,6 +161,18 @@ def waitFor(path):
 
     time.sleep(10)
 
+def waitForStep(base_path, rank, step, fl_round):
+    while not os.path.exists(os.path.join(base_path, str(rank), str(fl_round), f"completed_step_{step}.txt")):
+        time.sleep(5)
+
+    time.sleep(5)
+
+def completeStep(base_path, rank, step, fl_round):
+    file_path = os.path.join(base_path, str(rank), str(fl_round), f"completed_step_{step}.txt")
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'w') as file:
+        file.write("Step completed")
+
 def removeDir(dir_to_remove):
     if os.path.exists(dir_to_remove) and os.path.isdir(dir_to_remove):
         shutil.rmtree(dir_to_remove)
@@ -194,6 +206,7 @@ def main():
         teacher_model = get_teacher_model(args, device)
 
         print_rank(f"STEP 0 COMPLETE @ {rank}")
+        completeStep(args.save, rank, 0, fl_round)
 
         # Step 1: Fine tune seperately and save to results/rank/fl_round/
 
@@ -204,15 +217,16 @@ def main():
         if rank < 1 : teacher_model = fine_tune(teacher_model, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
 
         print_rank(f"STEP 1 COMPLETE @ {rank}")
+        completeStep(args.save, rank, 1, fl_round)
 
         # Step 2: Load all clients when they are ready onto rank 0
 
         if rank == 0:
             for student in range(size):
-                path_to_wait = os.path.join(args.save, str(student + 1), "_" + str(fl_round))
-                waitFor(path_to_wait)
+                waitForStep(args.save, student + 1, 1, fl_round)
 
         print_rank(f"STEP 2 COMPLETE @ {rank}")
+        completeStep(args.save, rank, 2, fl_round)
 
         # Step 3: Ensemble and Train teacher using MiniLLM
 
@@ -221,14 +235,16 @@ def main():
             student2teacher_kd(student_models, teacher_model, args, tokenizer, ds_config, fl_round)
 
         print_rank(f"STEP 3 COMPLETE @ {rank}")
+        completeStep(args.save, rank, 3, fl_round)
 
         # Step 4: Once teacher is ready, load teacher on all ranks
 
         args.teacher_model_path = os.path.join(args.save, str(0), str(fl_round))
-        waitFor(args.teacher_model_path)
+        waitForStep(args.save, 0, 3, fl_round)
         teacher_model = get_teacher_model(args, device)
 
         print_rank(f"STEP 4 COMPLETE @ {rank}")
+        completeStep(args.save, rank, 4, fl_round)
 
         # Step 5: Train Students seperately using MiniLLM and update path
 
@@ -237,6 +253,7 @@ def main():
             args.model_path = os.path.join(args.save, str(rank), str(fl_round))
 
         print_rank(f"STEP 5 COMPLETE @ {rank}")
+        completeStep(args.save, rank, 5, fl_round)
 
     if rank == 0:
         for fl_round in range(args.fl_rounds - 1):
