@@ -285,5 +285,5 @@ def test():
     exit()
     
 if __name__ == "__main__":
-    # main()
-    test()
+    main()
+

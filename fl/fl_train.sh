@@ -67,9 +67,9 @@ CHUNK_SIZE=16
 OPTS=""
 OPTS+=" --fl-rank ${NEW_RANK}"
 OPTS+=" --num-clients 3"
-OPTS+=" --fl-rounds 10"
-OPTS+=" --epochs 10"
-OPTS+=" --fine-tune-epochs 10"
+OPTS+=" --fl-rounds 2"
+OPTS+=" --epochs 1"
+OPTS+=" --fine-tune-epochs 1"
 # model
 OPTS+=" --base-path ${BASE_PATH}"
 OPTS+=" --model-path ${CKPT}"
