@@ -350,6 +350,7 @@ class PPOTrainer():
 
                     # end
                     if self.global_iter_count >= self.total_steps:
+                        return
                         self.save()
                         results, preds, response_texts = self.evaluate_ppo()
                         if self.eval_lm_pipeline is not None:
