@@ -255,18 +255,19 @@ def main():
         print_rank(f"STEP 5 COMPLETE @ RANK {rank} in ROUND {fl_round}")
         completeStep(args.save, rank, 5, fl_round)
 
-    if (rank > 0): waitForStep(args.save, 0, 4, args.fl_rounds - 1)
-    for fl_round in range(args.fl_rounds - 1):
-        removeDir(os.path.join(args.save, str(rank), str(fl_round)))
-        removeDir(os.path.join(args.save, str(rank), "_" + str(fl_round)))
+    # if (rank > 0): waitForStep(args.save, 0, 4, args.fl_rounds - 1)
+    # for fl_round in range(args.fl_rounds - 1):
+    #     removeDir(os.path.join(args.save, str(rank), str(fl_round)))
+    #     removeDir(os.path.join(args.save, str(rank), "_" + str(fl_round)))
 
-    removeDir(os.path.join(args.save, str(rank), "_" + str(args.fl_rounds - 1)))
+    # removeDir(os.path.join(args.save, str(rank), "_" + str(args.fl_rounds - 1)))
 
-    if rank == 0 : print_rank("*" * 100)
-    if rank == 0 : print_rank(f"FL MINILLM COMPLETE")
-    if rank == 0 : print_rank("*" * 100)
+    # if rank == 0 : print_rank("*" * 100)
+    # if rank == 0 : print_rank(f"FL MINILLM COMPLETE")
+    # if rank == 0 : print_rank("*" * 100)
 
     print_rank(str(rank) + " is DONE")
+    exit()
         
 def test():
     ds_config, args = setup_args()
