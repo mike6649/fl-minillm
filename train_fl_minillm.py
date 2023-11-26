@@ -251,7 +251,7 @@ def main():
         # Step 5: Train Students seperately using MiniLLM and update path
 
         if rank > 0 : 
-            teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank)
+            # teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank)
             args.model_path = os.path.join(args.save, str(rank), str(fl_round))
 
         print_rank(f"STEP 5 COMPLETE @ RANK {rank} in ROUND {fl_round}")
