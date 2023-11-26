@@ -268,5 +268,21 @@ def main():
 
     print_rank(str(rank) + " is DONE")
         
+def test():
+    ds_config, args = setup_args()
+    device = torch.cuda.current_device()
+
+    rank = args.fl_rank
+    size = args.num_clients
+
+    print_rank(f"Launched process {rank}\n")
+    
+    tokenizer = get_tokenizer(args)
+    finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer, rank)
+
+    student_model = get_student_model(args, device) if rank > 0 else None
+    exit()
+    
 if __name__ == "__main__":
-    main()
+    # main()
+    test()
