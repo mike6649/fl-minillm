@@ -4,7 +4,7 @@ MASTER_ADDR=localhost
 # MASTER_PORT=${3-2012}
 NNODES=1
 NODE_RANK=0
-GPUS_PER_NODE=2
+GPUS_PER_NODE=${1-2}
 
 PID_FILE="slurm_pids_$SLURM_JOB_ID.txt"
 
@@ -45,13 +45,13 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
 
 # model
 # default to working directory
-BASE_PATH=${1-"."}
+BASE_PATH=${2-"."}
 
 CKPT_NAME="flminillm-student"
-CKPT=${2-"${BASE_PATH}/checkpoints/gpt2/"}
+CKPT=${3-"${BASE_PATH}/checkpoints/gpt2/"}
 
 TEACHER_CKPT_NAME="flminillm-teacher"
-TEACHER_CKPT=${3-"${BASE_PATH}/checkpoints/gpt2-large/"}
+TEACHER_CKPT=${4-"${BASE_PATH}/checkpoints/gpt2-large/"}
 
 # data
 PROMPT_DATA_DIR="${BASE_PATH}/processed_data/dolly/prompt/gpt2/"
