@@ -192,7 +192,7 @@ def main():
     finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer, rank)
 
     # Set to -1 if no previous checkpoint
-    start_at = 0
+    start_at = -1
     if start_at > -1:
         args.teacher_model_path = os.path.join(args.save, str(0), str(start_at))
         if rank > 0 : args.model_path = os.path.join(args.save, str(rank), str(start_at))
