@@ -265,7 +265,7 @@ def main():
     if rank == 0 : print_rank(f"FL MINILLM COMPLETE")
     if rank == 0 : print_rank("*" * 100)
 
-    print_rank(rank + " is DONE")
+    print_rank(str(rank) + " is DONE")
         
 if __name__ == "__main__":
     main()
