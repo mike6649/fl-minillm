@@ -281,6 +281,7 @@ def test():
     finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer, rank)
 
     student_model = get_student_model(args, device) if rank > 0 else None
+    print_rank(f"Done process {rank}\n")
     exit()
     
 if __name__ == "__main__":
