@@ -255,6 +255,7 @@ def main():
         print_rank(f"STEP 5 COMPLETE @ {rank}")
         completeStep(args.save, rank, 5, fl_round)
 
+    if (rank > 0): waitForStep(args.save, 0, 4, args.fl_rounds - 1)
     for fl_round in range(args.fl_rounds - 1):
         removeDir(os.path.join(args.save, str(rank), str(fl_round)))
         removeDir(os.path.join(args.save, str(rank), "_" + str(fl_round)))
