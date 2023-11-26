@@ -67,7 +67,7 @@ CHUNK_SIZE=16
 OPTS=""
 OPTS+=" --fl-rank ${NEW_RANK}"
 OPTS+=" --num-clients 3"
-OPTS+=" --fl-rounds 1"
+OPTS+=" --fl-rounds 2"
 OPTS+=" --epochs 1"
 OPTS+=" --fine-tune-epochs 1"
 # model

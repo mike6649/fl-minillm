@@ -191,11 +191,13 @@ def main():
     tokenizer = get_tokenizer(args)
     finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer, rank)
 
-    # start_at = 0
-    # args.teacher_model_path = os.path.join(args.save, str(0), str(start_at))
-    # if rank > 0 : args.model_path = os.path.join(args.save, str(rank), str(start_at))
+    # Set to -1 if no previous checkpoint
+    start_at = 0
+    if start_at > -1:
+        args.teacher_model_path = os.path.join(args.save, str(0), str(start_at))
+        if rank > 0 : args.model_path = os.path.join(args.save, str(rank), str(start_at))
 
-    for fl_round in range(0, args.fl_rounds):
+    for fl_round in range(start_at + 1, args.fl_rounds):
         if rank == 0 : print_rank("*" * 100)
         if rank == 0 : print_rank(f"FL MINILLM ROUND {fl_round + 1} / {args.fl_rounds}")
         if rank == 0 : print_rank("*" * 100)
