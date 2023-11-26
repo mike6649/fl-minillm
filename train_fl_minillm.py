@@ -255,13 +255,17 @@ def main():
         print_rank(f"STEP 5 COMPLETE @ {rank}")
         completeStep(args.save, rank, 5, fl_round)
 
-    if rank == 0:
-        for fl_round in range(args.fl_rounds - 1):
+    for fl_round in range(args.fl_rounds - 1):
+        removeDir(os.path.join(args.save, str(rank), str(fl_round)))
+        removeDir(os.path.join(args.save, str(rank), "_" + str(fl_round)))
 
-            removeDir(os.path.join(args.save, str(rank), str(fl_round)))
-            removeDir(os.path.join(args.save, str(rank), "_" + str(fl_round)))
+    removeDir(os.path.join(args.save, str(rank), "_" + str(args.fl_rounds - 1)))
 
-        removeDir(os.path.join(args.save, str(rank), "_" + str(args.fl_rounds - 1)))
+    if rank == 0 : print_rank("*" * 100)
+    if rank == 0 : print_rank(f"FL MINILLM COMPLETE")
+    if rank == 0 : print_rank("*" * 100)
+
+    print_rank(rank + " is DONE")
         
 if __name__ == "__main__":
     main()
