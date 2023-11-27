@@ -201,7 +201,7 @@ def main():
         args.teacher_model_path = os.path.join(args.save, str(0), str(start_at))
         if rank > 0 : args.model_path = os.path.join(args.save, str(rank), str(start_at))
 
-    args.teacher_model_path = os.path.join(args.save, str(0), str(0))
+    args.teacher_model_path = os.path.join(args.save, str(0), str(1))
     teacher_model = get_teacher_model(args, device)
 
     for fl_round in range(start_at + 1, args.fl_rounds):
@@ -266,5 +266,5 @@ def train_teacher():
     print_rank(f"TEACHER FINETUNED")
 
 if __name__ == "__main__":
-    # main()
-    train_teacher()
+    main()
+    # train_teacher()
