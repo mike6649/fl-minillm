@@ -72,7 +72,7 @@ def fine_tune(model, args, tokenizer, finetune_dataset, ds_config):
 
 def student2teacher_kd(students, teacher_model, args, tokenizer, ds_config, fl_round):
     print_rank("*" * 100)
-    print_rank(f"Running student2teacher_kd...")
+    print_rank(f"Running student2teacher_kd in ROUND {fl_round}...")
     # create megastudent
     megastudent = CombinedClients(students)
     reward = Reward(args, tokenizer, megastudent)
@@ -87,11 +87,8 @@ def student2teacher_kd(students, teacher_model, args, tokenizer, ds_config, fl_r
         teacher_model=megastudent,
         student_model=teacher_model,
         ds_config=ds_config,
-
-        ## TODO: We will modify the following lines to point to the directory based on rank.
-        ## Construction of the directories should be the output of chengs data spliting script given n ranks
-        prompt_data=args.prompt_data_dir,
-        eval_prompt_data=args.prompt_data_dir,
+        prompt_data=args.prompt_data_dir + str(0) + "/",
+        eval_prompt_data=args.prompt_data_dir + str(0) + "/",
         lm_data=args.lm_data_dir,
         eval_lm_data=args.lm_data_dir,
     )
@@ -101,7 +98,7 @@ def student2teacher_kd(students, teacher_model, args, tokenizer, ds_config, fl_r
 def teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank):
 
     reward = Reward(args, tokenizer, teacher_model)
-    print_rank(f"teacher2student_kd to student @ rank {rank}...")
+    print_rank(f"teacher2student_kd to student @ RANK {rank} in ROUND {fl_round}...")
 
     prev_save = args.save
     args.save = os.path.join(args.save, str(rank), str(fl_round))
@@ -113,11 +110,8 @@ def teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config,
         teacher_model=teacher_model,
         student_model=student_model,
         ds_config=ds_config,
-
-        ## TODO: We will modify the following lines to point to the directory based on rank.
-        ## Construction of the directories should be the output of chengs data spliting script given n ranks
-        prompt_data=args.prompt_data_dir,
-        eval_prompt_data=args.prompt_data_dir,
+        prompt_data=args.prompt_data_dir + str(0) + "/",
+        eval_prompt_data=args.prompt_data_dir + str(0) + "/",
         lm_data=args.lm_data_dir,
         eval_lm_data=args.lm_data_dir,
     )
@@ -167,6 +161,22 @@ def waitFor(path):
 
     time.sleep(10)
 
+def waitForStep(base_path, rank, step, fl_round):
+    while not os.path.exists(os.path.join(base_path, str(rank), str(fl_round), f"completed_step_{step}.txt")):
+        time.sleep(5)
+
+    time.sleep(5)
+
+def completeStep(base_path, rank, step, fl_round):
+    file_path = os.path.join(base_path, str(rank), str(fl_round), f"completed_step_{step}.txt")
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'w') as file:
+        file.write("Step completed")
+
+def isStepComplete(base_path, rank, step, fl_round):
+    file_path = os.path.join(base_path, str(rank), str(fl_round), f"completed_step_{step}.txt")
+    return os.path.exists(file_path)
+
 def removeDir(dir_to_remove):
     if os.path.exists(dir_to_remove) and os.path.isdir(dir_to_remove):
         shutil.rmtree(dir_to_remove)
@@ -185,72 +195,110 @@ def main():
     tokenizer = get_tokenizer(args)
     finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer, rank)
 
-    # start_at = 0
-    # args.teacher_model_path = os.path.join(args.save, str(0), str(start_at))
-    # if rank > 0 : args.model_path = os.path.join(args.save, str(rank), str(start_at))
+    # Set to -1 if no previous checkpoint
+    start_at = -1
+    if start_at > -1:
+        args.teacher_model_path = os.path.join(args.save, str(0), str(start_at))
+        if rank > 0 : args.model_path = os.path.join(args.save, str(rank), str(start_at))
 
-    for fl_round in range(0, args.fl_rounds):
+    for fl_round in range(start_at + 1, args.fl_rounds):
         if rank == 0 : print_rank("*" * 100)
         if rank == 0 : print_rank(f"FL MINILLM ROUND {fl_round + 1} / {args.fl_rounds}")
         if rank == 0 : print_rank("*" * 100)
 
         # Step 0: Load respective model
 
+        if fl_round > 0: waitForStep(args.save, rank=rank, step=5, fl_round=fl_round - 1)
         student_model = get_student_model(args, device) if rank > 0 else None
         teacher_model = get_teacher_model(args, device)
 
-        print_rank(f"STEP 0 COMPLETE @ {rank}")
+        print_rank(f"STEP 0 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        completeStep(args.save, rank, 0, fl_round)
 
         # Step 1: Fine tune seperately and save to results/rank/fl_round/
 
         finetuning_args.save = os.path.join(args.save, str(rank), "_" + str(fl_round))
         os.makedirs(finetuning_args.save, exist_ok=True)
 
-        if rank > 0 : student_model = fine_tune(student_model, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
-        if rank < 1 : teacher_model = fine_tune(teacher_model, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
+        if isStepComplete(args.save, rank, 1, fl_round):
+            args.model_path = os.path.join(args.save, str(rank), "_" + str(fl_round))
+            args.teacher_model_path = os.path.join(args.save, str(0), "_" + str(fl_round))
 
-        print_rank(f"STEP 1 COMPLETE @ {rank}")
+            if rank > 0 : student_model = get_student_model(args, device)
+            if rank < 0 : teacher_model = get_teacher_model(args, device)
+        else:
+            if rank > 0 : student_model = fine_tune(student_model, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
+            if rank < 1 : teacher_model = fine_tune(teacher_model, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
+
+        print_rank(f"STEP 1 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        completeStep(args.save, rank, 1, fl_round)
 
         # Step 2: Load all clients when they are ready onto rank 0
 
-        if rank == 0:
+        if rank == 0 and not isStepComplete(args.save, rank, 2, fl_round):
             for student in range(size):
-                path_to_wait = os.path.join(args.save, str(student + 1), "_" + str(fl_round))
-                waitFor(path_to_wait)
+                waitForStep(args.save, student + 1, 1, fl_round)
 
-        print_rank(f"STEP 2 COMPLETE @ {rank}")
+        print_rank(f"STEP 2 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        completeStep(args.save, rank, 2, fl_round)
 
         # Step 3: Ensemble and Train teacher using MiniLLM
 
         if rank == 0 :
             student_models = get_student_models(args, device, fl_round)
-            student2teacher_kd(student_models, teacher_model, args, tokenizer, ds_config, fl_round)
+            if not isStepComplete(args.save, rank, 3, fl_round): student2teacher_kd(student_models, teacher_model, args, tokenizer, ds_config, fl_round)
 
-        print_rank(f"STEP 3 COMPLETE @ {rank}")
+        print_rank(f"STEP 3 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        completeStep(args.save, rank, 3, fl_round)
 
         # Step 4: Once teacher is ready, load teacher on all ranks
 
         args.teacher_model_path = os.path.join(args.save, str(0), str(fl_round))
-        waitFor(args.teacher_model_path)
+        waitForStep(args.save, 0, 3, fl_round)
         teacher_model = get_teacher_model(args, device)
 
-        print_rank(f"STEP 4 COMPLETE @ {rank}")
+        print_rank(f"STEP 4 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        completeStep(args.save, rank, 4, fl_round)
 
         # Step 5: Train Students seperately using MiniLLM and update path
 
         if rank > 0 : 
-            teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank)
+            if not isStepComplete(args.save, rank, 5, fl_round): teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank)
             args.model_path = os.path.join(args.save, str(rank), str(fl_round))
 
-        print_rank(f"STEP 5 COMPLETE @ {rank}")
+        print_rank(f"STEP 5 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        completeStep(args.save, rank, 5, fl_round)
 
-    if rank == 0:
-        for fl_round in range(args.fl_rounds - 1):
+    # if (rank > 0): waitForStep(args.save, 0, 4, args.fl_rounds - 1)
+    # for fl_round in range(args.fl_rounds - 1):
+    #     removeDir(os.path.join(args.save, str(rank), str(fl_round)))
+    #     removeDir(os.path.join(args.save, str(rank), "_" + str(fl_round)))
 
-            removeDir(os.path.join(args.save, str(rank), str(fl_round)))
-            removeDir(os.path.join(args.save, str(rank), "_" + str(fl_round)))
+    # removeDir(os.path.join(args.save, str(rank), "_" + str(args.fl_rounds - 1)))
 
-        removeDir(os.path.join(args.save, str(rank), "_" + str(args.fl_rounds - 1)))
+    # if rank == 0 : print_rank("*" * 100)
+    # if rank == 0 : print_rank(f"FL MINILLM COMPLETE")
+    # if rank == 0 : print_rank("*" * 100)
+
+    print_rank(str(rank) + " is DONE")
+    exit()
         
+def test():
+    ds_config, args = setup_args()
+    device = torch.cuda.current_device()
+
+    rank = args.fl_rank
+    size = args.num_clients
+
+    print_rank(f"Launched process {rank}\n")
+    
+    tokenizer = get_tokenizer(args)
+    finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer, rank)
+
+    student_model = get_student_model(args, device) if rank > 0 else None
+    print_rank(f"Done process {rank}\n")
+    exit()
+    
 if __name__ == "__main__":
     main()
+
