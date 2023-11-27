@@ -257,7 +257,8 @@ def train_teacher():
     tokenizer = get_tokenizer(args)
     finetuning_args, fine_tune_dataset = setup_fine_tuning(args, tokenizer, rank)
 
-    finetuning_args.save = os.path.join(args.save, str(0), str(0))
+    finetuning_args.save = os.path.join(args.save, str(0), str(1))
+    args.teacher_model_path = os.path.join(args.save, str(0), str(0))
 
     teacher_model = get_teacher_model(args, device)
     teacher_model = fine_tune(teacher_model, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
