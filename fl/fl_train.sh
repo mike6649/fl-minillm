@@ -132,7 +132,7 @@ export WANDB_DISABLED=True
 export TF_CPP_MIN_LOG_LEVEL=3
 export PYTHONPATH=${BASE_PATH}
 
-CMD="torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/train_fl_minillm.py ${OPTS} $@"
+CMD="torchrun ${DISTRIBUTED_ARGS} ${BASE_PATH}/train_simple_fl_minillm.py ${OPTS} $@"
 # CMD="python test.py"
 
 echo ${CMD}
