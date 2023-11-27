@@ -16,4 +16,4 @@ cd $SCRATCH/smr/fl-minillm
 
 module load conda
 conda activate sysml
-srun bash fl/fl_train.sh 4
+srun bash fl/fl_train.sh 4 1
