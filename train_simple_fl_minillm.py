@@ -236,7 +236,7 @@ def main():
         # Step 2: Train Students seperately using MiniLLM and update path
 
         if rank > 0 : 
-            if not isStepComplete(args.save, rank, 5, fl_round): teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank)
+            if not isStepComplete(args.save, rank, 2, fl_round): teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank)
             args.model_path = os.path.join(args.save, str(rank), str(fl_round))
 
         print_rank(f"STEP 2 COMPLETE @ RANK {rank} in ROUND {fl_round}")
