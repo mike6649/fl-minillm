@@ -212,7 +212,7 @@ def main():
         student_model = get_student_model(args, device) if rank > 0 else None
         teacher_model = get_teacher_model(args, device)
 
-        print_rank(f"STEP 0 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        print_rank(f"STEP 0 (LOADING MODEL) COMPLETE @ RANK {rank} in ROUND {fl_round}")
         completeStep(args.save, rank, 0, fl_round)
 
         # Step 1: Fine tune seperately and save to results/rank/fl_round/
@@ -230,7 +230,7 @@ def main():
             if rank > 0 : student_model = fine_tune(student_model, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
             if rank < 1 : teacher_model = fine_tune(teacher_model, finetuning_args, tokenizer, fine_tune_dataset, ds_config)
 
-        print_rank(f"STEP 1 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        print_rank(f"STEP 1 (FINE TUNING MODEL) COMPLETE @ RANK {rank} in ROUND {fl_round}")
         completeStep(args.save, rank, 1, fl_round)
 
         # Step 2: Load all clients when they are ready onto rank 0
@@ -239,7 +239,7 @@ def main():
             for student in range(size):
                 waitForStep(args.save, student + 1, 1, fl_round)
 
-        print_rank(f"STEP 2 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        print_rank(f"STEP 2 (UPDATING MODEL) COMPLETE @ RANK {rank} in ROUND {fl_round}")
         completeStep(args.save, rank, 2, fl_round)
 
         # Step 3: Ensemble and Train teacher using MiniLLM
@@ -248,7 +248,7 @@ def main():
             student_models = get_student_models(args, device, fl_round)
             if not isStepComplete(args.save, rank, 3, fl_round): student2teacher_kd(student_models, teacher_model, args, tokenizer, ds_config, fl_round)
 
-        print_rank(f"STEP 3 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        print_rank(f"STEP 3 (ENSEMBLE MODEL) COMPLETE @ RANK {rank} in ROUND {fl_round}")
         completeStep(args.save, rank, 3, fl_round)
 
         # Step 4: Once teacher is ready, load teacher on all ranks
@@ -257,7 +257,7 @@ def main():
         waitForStep(args.save, 0, 3, fl_round)
         teacher_model = get_teacher_model(args, device)
 
-        print_rank(f"STEP 4 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        print_rank(f"STEP 4 (UPDATE TEACHER) COMPLETE @ RANK {rank} in ROUND {fl_round}")
         completeStep(args.save, rank, 4, fl_round)
 
         # Step 5: Train Students seperately using MiniLLM and update path
@@ -266,7 +266,7 @@ def main():
             if not isStepComplete(args.save, rank, 5, fl_round): teacher2student_kd(student_model, teacher_model, args, tokenizer, ds_config, fl_round, rank)
             args.model_path = os.path.join(args.save, str(rank), str(fl_round))
 
-        print_rank(f"STEP 5 COMPLETE @ RANK {rank} in ROUND {fl_round}")
+        print_rank(f"STEP 5 (TRAIN STUDENT USING MiniLLM) COMPLETE @ RANK {rank} in ROUND {fl_round}")
         completeStep(args.save, rank, 5, fl_round)
 
     # if (rank > 0): waitForStep(args.save, 0, 4, args.fl_rounds - 1)
