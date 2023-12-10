@@ -48,13 +48,16 @@ We use [`databricks-dolly-15k`](https://huggingface.co/datasets/databricks/datab
 salloc -N2 -t1:15:00 --mem-per-gpu=12G --ntasks-per-node=2 --gpus-per-task=2
 ```
 
-**Step 2: Run FL-MiniLLM Training**
+**Step 2: Dataset Processing**
+Please refer to [this](https://github.com/microsoft/LMOps/tree/main/minillm) to process the data. You can also access our processed data in our configured environment.
+
+**Step 3: Run FL-MiniLLM Training**
 
 ```bash
 bash fl/mpi_launch.sh
 ```
 
-**Step 3: Evaluation**
+**Step 4: Evaluation**
 
 ```bash
 bash evaluate.sh
