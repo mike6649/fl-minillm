@@ -6,12 +6,11 @@
 
 #### Hardware Dependencies
 
-- A X86-CPU machine with at least GB host memory
-- At least two computation nodes, each of which is equipted with at least 4 Nvidia GPUs.
+- At least two computation nodes, each of which is equipped with at least 4 Nvidia GPUs.
 
 #### Software Dependencies
 
-The main softwares used in this projects are
+The main software used in this project are
 
 - PyTorch 2.0.1
 - DeepSpeed 0.10.1
@@ -61,6 +60,6 @@ bash fl/mpi_launch.sh
 bash evaluate.sh
 ```
 
-You can adjust the arguments listed in the above scripts for evaluating our project under different settings.
+You can adjust the arguments listed in the above scripts to evaluate our project under different settings.
 
 For the training and evaluation of the original MiniLLM script, please refer to [this repo](https://github.com/microsoft/LMOps/tree/main/minillm).
