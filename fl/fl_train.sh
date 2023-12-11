@@ -44,14 +44,17 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
                   --master_port $NEW_MASTER_PORT"
 
 # model
+EPOCHS=${2-10}
+FL_ROUNDS=${3-10}
+
 # default to working directory
-BASE_PATH=${2-"."}
+BASE_PATH=${4-"."}
 
 CKPT_NAME="flminillm-student"
-CKPT=${3-"${BASE_PATH}/checkpoints/gpt2/"}
+CKPT=${5-"${BASE_PATH}/checkpoints/gpt2/"}
 
 TEACHER_CKPT_NAME="flminillm-teacher"
-TEACHER_CKPT=${4-"${BASE_PATH}/checkpoints/gpt2-large/"}
+TEACHER_CKPT=${6-"${BASE_PATH}/checkpoints/gpt2-large/"}
 
 # data
 PROMPT_DATA_DIR="${BASE_PATH}/processed_data/dolly/prompt/gpt2/"
@@ -67,9 +70,9 @@ CHUNK_SIZE=16
 OPTS=""
 OPTS+=" --fl-rank ${NEW_RANK}"
 OPTS+=" --num-clients 3"
-OPTS+=" --fl-rounds 10"
-OPTS+=" --epochs 10"
-OPTS+=" --fine-tune-epochs 10"
+OPTS+=" --fl-rounds ${FL_ROUNDS}"
+OPTS+=" --epochs ${EPOCHS}"
+OPTS+=" --fine-tune-epochs ${EPOCHS}"
 # model
 OPTS+=" --base-path ${BASE_PATH}"
 OPTS+=" --model-path ${CKPT}"

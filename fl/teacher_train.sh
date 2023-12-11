@@ -3,7 +3,7 @@
 #SBATCH -C gpu
 #SBATCH -q regular
 #SBATCH -t 3:00:00
-#SBATCH -N 4
+#SBATCH -N 1
 #SBATCH --ntasks-per-node=1
 #SBATCH -c 128
 #SBATCH --gpus-per-task=4
@@ -16,4 +16,4 @@ cd $SCRATCH/smr/fl-minillm
 
 module load conda
 conda activate sysml
-srun bash fl/fl_train.sh 4 1
+srun bash fl/fl_train.sh 4 50
